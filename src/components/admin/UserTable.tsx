@@ -3,7 +3,7 @@
 // Part 31B — Paginated, searchable user management table.
 
 import { useState, useCallback, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { adminFetch } from '@/lib/auth';
 import type { AdminUserRow, AccountStatus, UserFilters, PaginatedResponse } from '@/types/admin';
 import { UserDetailSheet } from './UserDetailSheet';
@@ -14,6 +14,22 @@ const STATUS_COLORS: Record<AccountStatus, string> = {
   suspended: 'bg-red-500/15   text-red-400   border-red-500/25',
   flagged:   'bg-yellow-500/15 text-yellow-400 border-yellow-500/25',
 };
+
+// Inline chevron SVG for select dropdowns
+const CHEVRON_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`;
+
+const SELECT_CLASS =
+  'bg-[#13132A] border border-white/20 rounded-xl px-3 py-2.5 ' +
+  'text-sm text-white/90 outline-none hover:border-white/30 ' +
+  'focus:border-[#6C63FF]/60 transition-all cursor-pointer appearance-none pr-8';
+
+const SELECT_STYLE: React.CSSProperties = {
+  backgroundImage:    CHEVRON_BG,
+  backgroundRepeat:   'no-repeat',
+  backgroundPosition: 'right 10px center',
+};
+
+const OPT: React.CSSProperties = { background: '#13132A', color: '#fff' };
 
 function Avatar({ user }: { user: AdminUserRow }) {
   const initials = (user.fullName ?? user.email ?? '?')
@@ -97,6 +113,7 @@ export function UserTable() {
     <>
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
+
         {/* Search */}
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
@@ -110,35 +127,37 @@ export function UserTable() {
           />
         </div>
 
-        {/* Status filter */}
+        {/* Status filter — always visible */}
         <select
           value={filters.status}
-          onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as any, page: 1 }))}
-          className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5
-                     text-sm text-white/70 outline-none focus:border-[#6C63FF]/40 transition-all"
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, status: e.target.value as any, page: 1 }))
+          }
+          className={SELECT_CLASS}
+          style={SELECT_STYLE}
         >
-          <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-          <option value="flagged">Flagged</option>
+          <option value="all"       style={OPT}>All Statuses</option>
+          <option value="active"    style={OPT}>Active</option>
+          <option value="suspended" style={OPT}>Suspended</option>
+          <option value="flagged"   style={OPT}>Flagged</option>
         </select>
 
-        {/* Sort */}
+        {/* Sort — always visible */}
         <select
           value={`${filters.sortBy}_${filters.sortDir}`}
           onChange={(e) => {
             const [col, dir] = e.target.value.split('_') as [UserFilters['sortBy'], 'asc' | 'desc'];
             setFilters((f) => ({ ...f, sortBy: col, sortDir: dir, page: 1 }));
           }}
-          className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5
-                     text-sm text-white/70 outline-none focus:border-[#6C63FF]/40 transition-all"
+          className={SELECT_CLASS}
+          style={SELECT_STYLE}
         >
-          <option value="created_at_desc">Newest First</option>
-          <option value="created_at_asc">Oldest First</option>
-          <option value="balance_desc">Most Credits</option>
-          <option value="balance_asc">Fewest Credits</option>
-          <option value="total_reports_desc">Most Reports</option>
-          <option value="total_consumed_desc">Most Consumed</option>
+          <option value="created_at_desc"     style={OPT}>Newest First</option>
+          <option value="created_at_asc"      style={OPT}>Oldest First</option>
+          <option value="balance_desc"        style={OPT}>Most Credits</option>
+          <option value="balance_asc"         style={OPT}>Fewest Credits</option>
+          <option value="total_reports_desc"  style={OPT}>Most Reports</option>
+          <option value="total_consumed_desc" style={OPT}>Most Consumed</option>
         </select>
 
         <div className="ml-auto text-xs text-white/30 whitespace-nowrap">

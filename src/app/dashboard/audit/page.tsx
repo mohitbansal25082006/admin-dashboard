@@ -1,6 +1,7 @@
 'use client';
 // Admin-Dashboard/src/app/dashboard/audit/page.tsx
 // Part 31B — Admin audit log: every admin action in one searchable table.
+// Part 31B UPDATE — Dropdown always visible (border/text/bg fix).
 
 import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronLeft, ChevronRight, Activity } from 'lucide-react';
@@ -9,16 +10,37 @@ import { Header }     from '@/components/admin/Header';
 import { formatDistanceToNow } from 'date-fns';
 import type { AuditLogRow, PaginatedResponse } from '@/types/admin';
 
-const ACTION_COLORS: Record<string, string> = {
-  credit_adjustment:   'bg-blue-500/15    text-blue-400',
-  suspend_user:        'bg-red-500/15     text-red-400',
-  unsuspend_user:      'bg-green-500/15   text-green-400',
-  flag_user:           'bg-yellow-500/15  text-yellow-400',
-  delete_user:         'bg-red-500/20     text-red-300',
-  view_user:           'bg-white/5        text-white/30',
-  revoke_credits:      'bg-orange-500/15  text-orange-400',
-  manual_grant:        'bg-purple-500/15  text-purple-400',
+// ── Shared select styles (always visible) ────────────────────────────────────
+
+const CHEVRON_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`;
+
+const SELECT_CLASS =
+  'bg-[#13132A] border border-white/20 rounded-xl px-3 py-2.5 ' +
+  'text-sm text-white/90 outline-none hover:border-white/30 ' +
+  'focus:border-[#6C63FF]/60 transition-all cursor-pointer appearance-none pr-8';
+
+const SELECT_STYLE: React.CSSProperties = {
+  backgroundImage:    CHEVRON_BG,
+  backgroundRepeat:   'no-repeat',
+  backgroundPosition: 'right 10px center',
 };
+
+const OPT: React.CSSProperties = { background: '#13132A', color: '#fff' };
+
+// ── Action color map ──────────────────────────────────────────────────────────
+
+const ACTION_COLORS: Record<string, string> = {
+  credit_adjustment: 'bg-blue-500/15   text-blue-400',
+  suspend_user:      'bg-red-500/15    text-red-400',
+  unsuspend_user:    'bg-green-500/15  text-green-400',
+  flag_user:         'bg-yellow-500/15 text-yellow-400',
+  delete_user:       'bg-red-500/20    text-red-300',
+  view_user:         'bg-white/5       text-white/30',
+  revoke_credits:    'bg-orange-500/15 text-orange-400',
+  manual_grant:      'bg-purple-500/15 text-purple-400',
+};
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AuditLogPage() {
   const [logs,       setLogs]       = useState<AuditLogRow[]>([]);
@@ -59,6 +81,8 @@ export default function AuditLogPage() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
+
+        {/* Search */}
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
           <input
@@ -71,20 +95,23 @@ export default function AuditLogPage() {
                        outline-none focus:border-[#6C63FF]/40 transition-all"
           />
         </div>
+
+        {/* Action filter — always visible */}
         <select
           value={action}
           onChange={(e) => { setAction(e.target.value); setPage(1); }}
-          className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5
-                     text-sm text-white/70 outline-none focus:border-[#6C63FF]/40 transition-all"
+          className={SELECT_CLASS}
+          style={SELECT_STYLE}
         >
-          <option value="all">All Actions</option>
-          <option value="credit_adjustment">Credit Adjustment</option>
-          <option value="suspend_user">Suspend</option>
-          <option value="unsuspend_user">Unsuspend</option>
-          <option value="flag_user">Flag</option>
-          <option value="delete_user">Delete</option>
-          <option value="revoke_credits">Revoke Credits</option>
+          <option value="all"               style={OPT}>All Actions</option>
+          <option value="credit_adjustment" style={OPT}>Credit Adjustment</option>
+          <option value="suspend_user"      style={OPT}>Suspend</option>
+          <option value="unsuspend_user"    style={OPT}>Unsuspend</option>
+          <option value="flag_user"         style={OPT}>Flag</option>
+          <option value="delete_user"       style={OPT}>Delete</option>
+          <option value="revoke_credits"    style={OPT}>Revoke Credits</option>
         </select>
+
         <span className="ml-auto text-xs text-white/30">{total.toLocaleString()} entries</span>
       </div>
 
@@ -106,7 +133,9 @@ export default function AuditLogPage() {
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i}>
                   {Array.from({ length: 6 }).map((__, j) => (
-                    <td key={j}><div className="h-4 bg-white/[0.05] rounded animate-pulse w-full max-w-[100px]" /></td>
+                    <td key={j}>
+                      <div className="h-4 bg-white/[0.05] rounded animate-pulse w-full max-w-[100px]" />
+                    </td>
                   ))}
                 </tr>
               ))
@@ -120,23 +149,31 @@ export default function AuditLogPage() {
             ) : (
               logs.map((log) => (
                 <tr key={log.id}>
-                  <td className="text-white/60 text-xs">{log.adminEmail ?? log.adminUserId.slice(0, 8)}</td>
+                  <td className="text-white/60 text-xs">
+                    {log.adminEmail ?? log.adminUserId.slice(0, 8)}
+                  </td>
                   <td>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize
                       ${ACTION_COLORS[log.action] ?? 'bg-white/5 text-white/40'}`}>
                       {log.action.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="text-white/50 text-xs">{log.targetEmail ?? log.targetUserId?.slice(0, 8) ?? '—'}</td>
+                  <td className="text-white/50 text-xs">
+                    {log.targetEmail ?? log.targetUserId?.slice(0, 8) ?? '—'}
+                  </td>
                   <td className="text-white/30 text-xs max-w-[200px]">
                     {log.afterValue
-                      ? Object.entries(log.afterValue).map(([k, v]) =>
-                          <span key={k} className="mr-2">{k}: <span className="text-white/50">{String(v)}</span></span>
-                        )
+                      ? Object.entries(log.afterValue).map(([k, v]) => (
+                          <span key={k} className="mr-2">
+                            {k}: <span className="text-white/50">{String(v)}</span>
+                          </span>
+                        ))
                       : '—'
                     }
                   </td>
-                  <td className="text-white/35 text-xs max-w-[160px] truncate">{log.reason ?? '—'}</td>
+                  <td className="text-white/35 text-xs max-w-[160px] truncate">
+                    {log.reason ?? '—'}
+                  </td>
                   <td className="text-white/25 text-xs whitespace-nowrap">
                     {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
                   </td>

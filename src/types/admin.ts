@@ -1,5 +1,5 @@
 // Admin-Dashboard/src/types/admin.ts
-// Part 31 — All TypeScript types for the admin dashboard
+// Parts 31–32 — Complete TypeScript types for the admin dashboard
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ export interface PlatformMetrics {
 // ─── Activity Chart ───────────────────────────────────────────────────────────
 
 export interface DailyActivity {
-  day: string;       // ISO date string "YYYY-MM-DD"
+  day: string;
   newUsers: number;
   newReports: number;
 }
@@ -51,11 +51,9 @@ export interface AdminUserRow {
   accountStatus: AccountStatus;
   isAdmin: boolean;
   createdAt: string;
-  // Credits info
   creditBalance: number;
   totalPurchased: number;
   totalConsumed: number;
-  // Activity
   totalReports: number;
   lastActiveAt: string | null;
 }
@@ -64,7 +62,6 @@ export interface AdminUserDetail extends AdminUserRow {
   bio: string | null;
   occupation: string | null;
   interests: string[] | null;
-  // Extended stats
   totalPodcasts: number;
   totalDebates: number;
   totalPresentations: number;
@@ -120,10 +117,11 @@ export interface PaymentRow {
   packId: string;
   razorpayOrderId: string;
   paymentId: string | null;
-  amount: number;       // in paise
-  amountInr: number;    // amount / 100
+  amount: number;
+  amountInr: number;
   status: RazorpayOrderStatus;
   creditsToAdd: number;
+  isTest: boolean;       // Part 32: true for test-mode orders
   createdAt: string;
   paidAt: string | null;
 }
@@ -153,6 +151,99 @@ export interface AuditLogRow {
   afterValue: Record<string, unknown> | null;
   reason: string | null;
   createdAt: string;
+}
+
+// ─── Part 32: Abuse Detection ─────────────────────────────────────────────────
+
+export type AbuseSignalType =
+  | 'credit_burn_rate'
+  | 'failed_payments'
+  | 'referral_farming'
+  | 'manual';
+
+export type AbuseSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type ReviewAction  = 'cleared' | 'warned' | 'suspended';
+
+export interface AbuseSignalRow {
+  id: string;
+  userId: string;
+  userEmail: string | null;
+  userName: string | null;
+  accountStatus: AccountStatus;
+  signalType: AbuseSignalType;
+  severity: AbuseSeverity;
+  details: Record<string, unknown>;
+  isReviewed: boolean;
+  reviewAction: ReviewAction | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface AbuseSignalFilters {
+  signalType: AbuseSignalType | 'all';
+  severity: AbuseSeverity | 'all';
+  showReviewed: boolean;
+  page: number;
+  pageSize: number;
+}
+
+export interface ResolveAbuseSignalPayload {
+  signalId: string;
+  userId: string;
+  action: ReviewAction;
+  note: string;
+  creditDeduction?: number;  // only used when action === 'warned'
+}
+
+// ─── Part 32: Content View ────────────────────────────────────────────────────
+
+export type PlatformContentType = 'report' | 'podcast' | 'debate' | 'academic_paper';
+
+export interface PlatformContentRow {
+  id: string;
+  contentType: PlatformContentType;
+  title: string;
+  subtitle: string | null;    // query (report) | topic (podcast/debate) | running head (paper)
+  userId: string;
+  userEmail: string | null;
+  userName: string | null;
+  status: string;
+  depth?: string;             // reports: quick | deep | expert
+  durationSeconds?: number;   // podcasts
+  wordCount?: number;         // academic papers
+  sourcesCount?: number;      // reports
+  createdAt: string;
+}
+
+export interface ContentFilters {
+  search: string;
+  contentType: PlatformContentType | 'all';
+  page: number;
+  pageSize: number;
+}
+
+// ─── Part 32: Workspace Overview ──────────────────────────────────────────────
+
+export interface WorkspaceOverviewRow {
+  id: string;
+  name: string;
+  description: string | null;
+  ownerId: string;
+  ownerEmail: string | null;
+  ownerName: string | null;
+  memberCount: number;
+  reportCount: number;
+  isPersonal: boolean;
+  inviteCode: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+}
+
+export interface WorkspaceOverviewFilters {
+  search: string;
+  page: number;
+  pageSize: number;
 }
 
 // ─── API Response types ───────────────────────────────────────────────────────
@@ -191,7 +282,7 @@ export interface RevokeCreditsPayload {
   reason: string;
 }
 
-// ─── UI state types ───────────────────────────────────────────────────────────
+// ─── UI state / filter types ──────────────────────────────────────────────────
 
 export interface UserFilters {
   search: string;
@@ -218,4 +309,5 @@ export interface PaymentFilters {
   dateTo: string;
   page: number;
   pageSize: number;
+  // showTest removed — live orders only
 }

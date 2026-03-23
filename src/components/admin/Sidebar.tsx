@@ -1,6 +1,7 @@
 'use client';
 // Admin-Dashboard/src/components/admin/Sidebar.tsx
-// Part 31B — Collapsible sidebar with navigation links.
+// Part 32 UPDATE — Added Abuse Detection, Content, Workspaces nav items.
+// All existing Part 31 logic preserved.
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -8,34 +9,37 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Receipt,
   ShieldCheck, LogOut, ChevronLeft, ChevronRight,
-  Activity, Menu,
+  Activity, AlertOctagon, FileText, Building2,
 } from 'lucide-react';
 import { adminSignOut } from '@/lib/auth';
 import { toast } from 'sonner';
 
 interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ReactNode;
+  label:  string;
+  href:   string;
+  icon:   React.ReactNode;
   badge?: string;
+  accent?: 'orange';
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Overview',    href: '/dashboard',          icon: <LayoutDashboard className="w-4 h-4" /> },
-  { label: 'Users',       href: '/dashboard/users',    icon: <Users          className="w-4 h-4" /> },
-  { label: 'Credits',     href: '/dashboard/credits',  icon: <CreditCard     className="w-4 h-4" /> },
-  { label: 'Payments',    href: '/dashboard/payments', icon: <Receipt        className="w-4 h-4" /> },
-  { label: 'Audit Log',   href: '/dashboard/audit',    icon: <Activity       className="w-4 h-4" /> },
+  { label: 'Overview',        href: '/dashboard',            icon: <LayoutDashboard className="w-4 h-4" /> },
+  { label: 'Users',           href: '/dashboard/users',      icon: <Users           className="w-4 h-4" /> },
+  { label: 'Credits',         href: '/dashboard/credits',    icon: <CreditCard      className="w-4 h-4" /> },
+  { label: 'Payments',        href: '/dashboard/payments',   icon: <Receipt         className="w-4 h-4" /> },
+  // Part 32 — new entries
+  { label: 'Abuse Detection', href: '/dashboard/abuse',      icon: <AlertOctagon    className="w-4 h-4" />, accent: 'orange' },
+  { label: 'Content',         href: '/dashboard/content',    icon: <FileText        className="w-4 h-4" /> },
+  { label: 'Workspaces',      href: '/dashboard/workspaces', icon: <Building2       className="w-4 h-4" /> },
+  { label: 'Audit Log',       href: '/dashboard/audit',      icon: <Activity        className="w-4 h-4" /> },
 ];
 
-interface SidebarProps {
-  adminEmail: string;
-}
+interface SidebarProps { adminEmail: string; }
 
 export function Sidebar({ adminEmail }: SidebarProps) {
-  const pathname = usePathname();
-  const router   = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const [collapsed,  setCollapsed]  = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -45,30 +49,22 @@ export function Sidebar({ adminEmail }: SidebarProps) {
     router.replace('/login');
   };
 
-  const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(href);
-  };
+  const isActive = (href: string) =>
+    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
 
   return (
     <aside
       className="relative flex flex-col h-screen border-r border-white/[0.06] transition-all duration-300 shrink-0"
-      style={{
-        width: collapsed ? '64px' : '220px',
-        background: 'linear-gradient(180deg, #0D0D1A 0%, #0A0A14 100%)',
-      }}
+      style={{ width: collapsed ? '64px' : '220px', background: 'linear-gradient(180deg,#0D0D1A 0%,#0A0A14 100%)' }}
     >
       {/* Collapse toggle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={() => setCollapsed(c => !c)}
         className="absolute -right-3 top-[68px] z-10 w-6 h-6 rounded-full
                    bg-[#16162A] border border-white/[0.12] flex items-center justify-center
                    text-white/40 hover:text-white/80 hover:border-[#6C63FF]/40 transition-all"
       >
-        {collapsed
-          ? <ChevronRight className="w-3 h-3" />
-          : <ChevronLeft  className="w-3 h-3" />
-        }
+        {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
 
       {/* Logo */}
@@ -84,22 +80,24 @@ export function Sidebar({ adminEmail }: SidebarProps) {
         )}
       </div>
 
-      {/* Nav links */}
+      {/* Nav */}
       <nav className="flex-1 py-4 flex flex-col gap-1 px-2 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
+          const isOrange = item.accent === 'orange';
           return (
             <Link
               key={item.href}
               href={item.href}
               title={collapsed ? item.label : undefined}
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
-                ${active
-                  ? 'bg-[#6C63FF]/15 text-[#6C63FF] border border-[#6C63FF]/20'
-                  : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
-                }
-              `}
+              className={[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                active
+                  ? isOrange
+                    ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+                    : 'bg-[#6C63FF]/15 text-[#6C63FF] border border-[#6C63FF]/20'
+                  : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]',
+              ].join(' ')}
             >
               <span className="shrink-0">{item.icon}</span>
               {!collapsed && (
@@ -115,7 +113,7 @@ export function Sidebar({ adminEmail }: SidebarProps) {
         })}
       </nav>
 
-      {/* Bottom: user + logout */}
+      {/* Bottom */}
       <div className="border-t border-white/[0.06] p-3">
         {!collapsed && (
           <div className="mb-3 px-2">
@@ -128,8 +126,7 @@ export function Sidebar({ adminEmail }: SidebarProps) {
           disabled={loggingOut}
           title={collapsed ? 'Sign out' : undefined}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
-                     text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all
-                     disabled:opacity-50"
+                     text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Sign out</span>}

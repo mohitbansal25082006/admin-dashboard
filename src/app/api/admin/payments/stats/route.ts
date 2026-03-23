@@ -1,10 +1,8 @@
 // Admin-Dashboard/src/app/api/admin/payments/stats/route.ts
-// Part 31C — Revenue aggregate stats + 30-day daily trend.
+// Part 32 UPDATE — Revenue stats ALWAYS exclude is_test orders.
 //
-// FIXED: Uses SELECT * and derives revenue from EITHER:
-//   - o.amount (when column exists, paise value)
-//   - o.credits_to_add mapped to known INR pack prices (fallback)
-// This survives both old and new schema versions without erroring.
+// Revenue cards (today / month / all-time) must never be polluted with test data.
+// The is_test column may be null on old rows — we treat null as live (false).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession, getAdminClient } from '@/lib/supabase-admin';
@@ -18,13 +16,10 @@ const CREDITS_TO_INR: Record<number, number> = {
   1200: 999,
 };
 
-/** Returns INR value for an order regardless of schema version */
 function orderToINR(o: any): number {
-  // Preferred: amount column (paise → INR)
   if (o.amount && Number(o.amount) > 0) {
     return Math.round(Number(o.amount) / 100);
   }
-  // Fallback: derive from credits_to_add
   const credits = Number(o.credits_to_add ?? 0);
   return CREDITS_TO_INR[credits] ?? 0;
 }
@@ -42,7 +37,7 @@ export async function GET(request: NextRequest) {
   try {
     const admin = getAdminClient();
 
-    // SELECT * so we get whatever columns the table has (amount OR credits_to_add)
+    // SELECT * so we get is_test when column exists
     const { data: orders, error: ordersError } = await admin
       .from('razorpay_orders')
       .select('*');
@@ -51,24 +46,27 @@ export async function GET(request: NextRequest) {
 
     const allOrders = (orders ?? []) as any[];
 
+    // Part 32: ALWAYS exclude test orders from revenue stats
+    // is_test = false OR is_test IS NULL (rows before schema_part32.sql)
+    const liveOrders = allOrders.filter((o: any) => !o.is_test);
+
     const now        = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const paidOrders       = allOrders.filter(o => o.status === 'paid');
-    const failedOrders     = allOrders.filter(o => o.status === 'failed');
-    const totalOrders      = allOrders.length;
+    const paidOrders       = liveOrders.filter((o) => o.status === 'paid');
+    const failedOrders     = liveOrders.filter((o) => o.status === 'failed');
+    const totalOrders      = liveOrders.length;
     const successfulOrders = paidOrders.length;
 
-    // Revenue totals
-    const allTimeInr   = paidOrders.reduce((s, o) => s + orderToINR(o), 0);
+    const allTimeInr = paidOrders.reduce((s, o) => s + orderToINR(o), 0);
 
     const todayInr = paidOrders
-      .filter(o => new Date(o.paid_at ?? o.created_at) >= todayStart)
+      .filter((o) => new Date(o.paid_at ?? o.created_at) >= todayStart)
       .reduce((s, o) => s + orderToINR(o), 0);
 
     const thisMonthInr = paidOrders
-      .filter(o => new Date(o.paid_at ?? o.created_at) >= monthStart)
+      .filter((o) => new Date(o.paid_at ?? o.created_at) >= monthStart)
       .reduce((s, o) => s + orderToINR(o), 0);
 
     const successRate = totalOrders > 0
@@ -85,10 +83,9 @@ export async function GET(request: NextRequest) {
       successRate,
     };
 
-    // ── 30-day daily revenue trend ─────────────────────────────────────────────
+    // ── 30-day daily revenue trend (live orders only) ─────────────────────────
     const dailyMap: Record<string, { amount: number; orders: number }> = {};
 
-    // Seed last 30 days with zeros
     for (let i = 29; i >= 0; i--) {
       const d   = new Date(now);
       d.setDate(d.getDate() - i);
@@ -96,7 +93,6 @@ export async function GET(request: NextRequest) {
       dailyMap[key] = { amount: 0, orders: 0 };
     }
 
-    // Fill in paid order data
     for (const order of paidOrders) {
       const dateStr = String(order.paid_at ?? order.created_at).slice(0, 10);
       if (dailyMap[dateStr]) {

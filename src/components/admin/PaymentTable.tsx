@@ -1,13 +1,14 @@
 'use client';
 // Admin-Dashboard/src/components/admin/PaymentTable.tsx
-// Part 31C — Full Razorpay order table with revenue summary cards,
-// success/fail breakdown, and manual credit revocation.
+// Part 32 UPDATE — Test orders toggle removed. Live orders only, always.
+// Revenue stats and table both show live Razorpay payments exclusively.
+// Part 32 UPDATE v2 — Dropdowns & date inputs always visible (border/text/bg fix).
 
 import { useState, useEffect, useCallback } from 'react';
 import {
   Search, ChevronLeft, ChevronRight, IndianRupee,
   TrendingUp, CheckCircle, XCircle, Clock, AlertTriangle,
-  ExternalLink, RefreshCw, Loader2,
+  ExternalLink, Loader2,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -21,6 +22,28 @@ import type {
   PaymentFilters, PaginatedResponse,
   RazorpayOrderStatus,
 } from '@/types/admin';
+
+// ── Shared select / input styles (always visible) ────────────────────────────
+
+const CHEVRON_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`;
+
+const SELECT_CLASS =
+  'bg-[#13132A] border border-white/20 rounded-xl px-3 py-2.5 ' +
+  'text-sm text-white/90 outline-none hover:border-white/30 ' +
+  'focus:border-[#6C63FF]/60 transition-all cursor-pointer appearance-none pr-8';
+
+const SELECT_STYLE: React.CSSProperties = {
+  backgroundImage:    CHEVRON_BG,
+  backgroundRepeat:   'no-repeat',
+  backgroundPosition: 'right 10px center',
+};
+
+const DATE_CLASS =
+  'bg-[#13132A] border border-white/20 rounded-xl px-3 py-2.5 ' +
+  'text-sm text-white/90 outline-none hover:border-white/30 ' +
+  'focus:border-[#6C63FF]/60 transition-all cursor-pointer';
+
+const OPT: React.CSSProperties = { background: '#13132A', color: '#fff' };
 
 // ── Status metadata ───────────────────────────────────────────────────────────
 
@@ -43,22 +66,19 @@ const PACK_LABELS: Record<string, string> = {
 
 function RevenueSummaryCards({ stats, loading }: { stats: RevenueStats | null; loading: boolean }) {
   const cards = [
-    { label: 'Today',          value: stats ? `₹${stats.todayInr.toFixed(0)}`     : '—', color: '#10B981', sub: 'revenue collected' },
-    { label: 'This Month',     value: stats ? `₹${stats.thisMonthInr.toFixed(0)}`  : '—', color: '#6C63FF', sub: 'revenue collected' },
-    { label: 'All Time',       value: stats ? `₹${stats.allTimeInr.toFixed(0)}`    : '—', color: '#F59E0B', sub: 'total revenue' },
-    { label: 'Success Rate',   value: stats ? `${stats.successRate.toFixed(1)}%`    : '—', color: '#3B82F6', sub: `${stats?.successfulOrders ?? 0} of ${stats?.totalOrders ?? 0} orders` },
-    { label: 'Successful',     value: stats ? stats.successfulOrders.toLocaleString() : '—', color: '#10B981', sub: 'paid orders' },
-    { label: 'Failed',         value: stats ? stats.failedOrders.toLocaleString()   : '—', color: '#EF4444', sub: 'failed orders' },
+    { label: 'Today',        value: stats ? `₹${stats.todayInr.toFixed(0)}`          : '—', color: '#10B981', sub: 'revenue collected'  },
+    { label: 'This Month',   value: stats ? `₹${stats.thisMonthInr.toFixed(0)}`       : '—', color: '#6C63FF', sub: 'revenue collected'  },
+    { label: 'All Time',     value: stats ? `₹${stats.allTimeInr.toFixed(0)}`         : '—', color: '#F59E0B', sub: 'total revenue'      },
+    { label: 'Success Rate', value: stats ? `${stats.successRate.toFixed(1)}%`         : '—', color: '#3B82F6', sub: `${stats?.successfulOrders ?? 0} of ${stats?.totalOrders ?? 0} orders` },
+    { label: 'Successful',   value: stats ? stats.successfulOrders.toLocaleString()    : '—', color: '#10B981', sub: 'paid orders'        },
+    { label: 'Failed',       value: stats ? stats.failedOrders.toLocaleString()        : '—', color: '#EF4444', sub: 'failed orders'      },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
       {cards.map((c, i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-white/[0.06] p-4"
-          style={{ background: 'linear-gradient(135deg, #13131F 0%, #0F0F1C 100%)' }}
-        >
+        <div key={i} className="rounded-xl border border-white/[0.06] p-4"
+          style={{ background: 'linear-gradient(135deg,#13131F 0%,#0F0F1C 100%)' }}>
           {loading ? (
             <>
               <div className="h-6 w-16 bg-white/[0.06] rounded animate-pulse mb-1" />
@@ -77,21 +97,19 @@ function RevenueSummaryCards({ stats, loading }: { stats: RevenueStats | null; l
   );
 }
 
-// ── Revenue trend mini-chart ──────────────────────────────────────────────────
+// ── Revenue trend chart ───────────────────────────────────────────────────────
 
 interface DailyRevenue { day: string; amount: number; orders: number; }
 
 function RevenueTrendChart({ data, loading }: { data: DailyRevenue[]; loading: boolean }) {
   if (loading || data.length === 0) return null;
   return (
-    <div
-      className="rounded-2xl border border-white/[0.07] p-5 mb-5"
-      style={{ background: 'linear-gradient(135deg, #13131F 0%, #0F0F1C 100%)' }}
-    >
+    <div className="rounded-2xl border border-white/[0.07] p-5 mb-5"
+      style={{ background: 'linear-gradient(135deg,#13131F 0%,#0F0F1C 100%)' }}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Revenue Trend (30 days)</h3>
-          <p className="text-xs text-white/35 mt-0.5">Daily revenue from captured Razorpay payments</p>
+          <p className="text-xs text-white/35 mt-0.5">Daily revenue from live Razorpay payments</p>
         </div>
         <TrendingUp className="w-4 h-4 text-green-400" />
       </div>
@@ -114,7 +132,8 @@ function RevenueTrendChart({ data, loading }: { data: DailyRevenue[]; loading: b
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               return (
-                <div className="rounded-xl border border-white/[0.08] px-3 py-2 text-xs" style={{ background: '#13131F' }}>
+                <div className="rounded-xl border border-white/[0.08] px-3 py-2 text-xs"
+                  style={{ background: '#13131F' }}>
                   <p className="text-white/40 mb-1">
                     {label ? format(new Date(label), 'MMM d, yyyy') : ''}
                   </p>
@@ -124,14 +143,8 @@ function RevenueTrendChart({ data, loading }: { data: DailyRevenue[]; loading: b
               );
             }}
           />
-          <Line
-            type="monotone"
-            dataKey="amount"
-            stroke="#10B981"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, fill: '#10B981' }}
-          />
+          <Line type="monotone" dataKey="amount" stroke="#10B981" strokeWidth={2}
+            dot={false} activeDot={{ r: 4, fill: '#10B981' }} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -140,9 +153,7 @@ function RevenueTrendChart({ data, loading }: { data: DailyRevenue[]; loading: b
 
 // ── Revoke credits modal ──────────────────────────────────────────────────────
 
-function RevokeModal({
-  payment, onClose, onSuccess,
-}: {
+function RevokeModal({ payment, onClose, onSuccess }: {
   payment: PaymentRow; onClose: () => void; onSuccess: () => void;
 }) {
   const [reason,  setReason]  = useState('');
@@ -161,7 +172,7 @@ function RevokeModal({
     });
     setLoading(false);
     if (error) { toast.error(error); return; }
-    toast.success(`Revoked ${payment.creditsToAdd} credits from ${payment.userEmail ?? payment.userId.slice(0,8)}`);
+    toast.success(`Revoked ${payment.creditsToAdd} credits from ${payment.userEmail ?? payment.userId.slice(0, 8)}`);
     onSuccess();
     onClose();
   };
@@ -169,11 +180,9 @@ function RevokeModal({
   return (
     <>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={onClose} />
-      <div
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50
-                   w-full max-w-[420px] rounded-2xl border border-white/[0.08] p-6"
-        style={{ background: '#13131F' }}
-      >
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50
+                      w-full max-w-[420px] rounded-2xl border border-white/[0.08] p-6"
+        style={{ background: '#13131F' }}>
         <div className="flex items-start gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-5 h-5 text-orange-400" />
@@ -181,16 +190,16 @@ function RevokeModal({
           <div>
             <h3 className="text-base font-semibold text-white">Revoke Credits</h3>
             <p className="text-xs text-white/40 mt-0.5">
-              This will deduct <span className="text-orange-400 font-semibold">{payment.creditsToAdd} credits</span> from{' '}
+              This will deduct{' '}
+              <span className="text-orange-400 font-semibold">{payment.creditsToAdd} credits</span> from{' '}
               <span className="text-white/70">{payment.userEmail ?? payment.userId.slice(0, 12)}</span>
             </p>
           </div>
         </div>
-
         <div className="bg-orange-500/5 border border-orange-500/15 rounded-xl p-3 mb-4 text-xs text-orange-300/70">
-          Order <span className="font-mono text-orange-300">{payment.razorpayOrderId}</span> · ₹{payment.amountInr} · {PACK_LABELS[payment.packId] ?? payment.packId}
+          Order <span className="font-mono text-orange-300">{payment.razorpayOrderId}</span>
+          {' '}· ₹{payment.amountInr} · {PACK_LABELS[payment.packId] ?? payment.packId}
         </div>
-
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
@@ -200,7 +209,6 @@ function RevokeModal({
                      text-sm text-white placeholder:text-white/25 outline-none resize-none
                      focus:border-orange-500/40 transition-all mb-4"
         />
-
         <div className="flex gap-3">
           <button
             onClick={onClose}
@@ -224,19 +232,20 @@ function RevokeModal({
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function PaymentTable() {
-  const [payments,   setPayments]   = useState<PaymentRow[]>([]);
-  const [stats,      setStats]      = useState<RevenueStats | null>(null);
-  const [trendData,  setTrendData]  = useState<DailyRevenue[]>([]);
-  const [total,      setTotal]      = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading,    setLoading]    = useState(true);
+  const [payments,     setPayments]     = useState<PaymentRow[]>([]);
+  const [stats,        setStats]        = useState<RevenueStats | null>(null);
+  const [trendData,    setTrendData]    = useState<DailyRevenue[]>([]);
+  const [total,        setTotal]        = useState(0);
+  const [totalPages,   setTotalPages]   = useState(1);
+  const [loading,      setLoading]      = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [revokeTarget, setRevokeTarget] = useState<PaymentRow | null>(null);
 
-  const [filters, setFilters] = useState<PaymentFilters>({
+  // showTest removed — filters only contain live-relevant fields
+  const [filters, setFilters] = useState<Omit<PaymentFilters, 'showTest'>>({
     search:   '',
     status:   'all',
     dateFrom: '',
@@ -245,7 +254,7 @@ export function PaymentTable() {
     pageSize: 20,
   });
 
-  // Load stats + trend once
+  // Load stats once
   useEffect(() => {
     (async () => {
       setStatsLoading(true);
@@ -257,7 +266,7 @@ export function PaymentTable() {
     })();
   }, []);
 
-  // Load payments when filters change
+  // Load payments on filter change
   const fetchPayments = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
@@ -282,20 +291,19 @@ export function PaymentTable() {
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
 
   const handleSearch = useCallback(
-    debounce((v: string) => setFilters((f) => ({ ...f, search: v, page: 1 })), 350),
+    debounce((v: string) => setFilters(f => ({ ...f, search: v, page: 1 })), 350),
     [],
   );
 
   return (
     <div>
-      {/* Revenue summary cards */}
       <RevenueSummaryCards stats={stats} loading={statsLoading} />
-
-      {/* Revenue trend chart */}
-      <RevenueTrendChart data={trendData} loading={statsLoading} />
+      <RevenueTrendChart   data={trendData} loading={statsLoading} />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
+
+        {/* Search */}
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
           <input
@@ -308,35 +316,35 @@ export function PaymentTable() {
           />
         </div>
 
+        {/* Status filter — always visible */}
         <select
           value={filters.status}
-          onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as any, page: 1 }))}
-          className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5
-                     text-sm text-white/70 outline-none focus:border-[#6C63FF]/40 transition-all"
+          onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as any, page: 1 }))}
+          className={SELECT_CLASS}
+          style={SELECT_STYLE}
         >
-          <option value="all">All Statuses</option>
-          <option value="paid">Paid</option>
-          <option value="created">Pending</option>
-          <option value="attempted">Attempted</option>
-          <option value="failed">Failed</option>
-          <option value="expired">Expired</option>
+          <option value="all"       style={OPT}>All Statuses</option>
+          <option value="paid"      style={OPT}>Paid</option>
+          <option value="created"   style={OPT}>Pending</option>
+          <option value="attempted" style={OPT}>Attempted</option>
+          <option value="failed"    style={OPT}>Failed</option>
+          <option value="expired"   style={OPT}>Expired</option>
         </select>
 
+        {/* Date range — always visible */}
         <div className="flex items-center gap-1">
           <input
             type="date"
             value={filters.dateFrom}
-            onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value, page: 1 }))}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5
-                       text-sm text-white/60 outline-none focus:border-[#6C63FF]/40 transition-all"
+            onChange={(e) => setFilters(f => ({ ...f, dateFrom: e.target.value, page: 1 }))}
+            className={DATE_CLASS}
           />
           <span className="text-white/25 text-sm">to</span>
           <input
             type="date"
             value={filters.dateTo}
-            onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value, page: 1 }))}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5
-                       text-sm text-white/60 outline-none focus:border-[#6C63FF]/40 transition-all"
+            onChange={(e) => setFilters(f => ({ ...f, dateTo: e.target.value, page: 1 }))}
+            className={DATE_CLASS}
           />
         </div>
 
@@ -346,10 +354,8 @@ export function PaymentTable() {
       </div>
 
       {/* Table */}
-      <div
-        className="rounded-2xl border border-white/[0.07] overflow-hidden"
-        style={{ background: '#0D0D1A' }}
-      >
+      <div className="rounded-2xl border border-white/[0.07] overflow-hidden"
+        style={{ background: '#0D0D1A' }}>
         <div className="overflow-x-auto">
           <table className="admin-table w-full">
             <thead>
@@ -384,7 +390,7 @@ export function PaymentTable() {
                 </tr>
               ) : (
                 payments.map((payment) => {
-                  const statusMeta = STATUS_META[payment.status];
+                  const sm = STATUS_META[payment.status];
                   return (
                     <tr key={payment.id}>
                       <td>
@@ -409,9 +415,9 @@ export function PaymentTable() {
                         {payment.creditsToAdd.toLocaleString()}
                       </td>
                       <td>
-                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border font-medium ${statusMeta.bg}`}>
-                          {statusMeta.icon}
-                          {statusMeta.label}
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-1
+                                          rounded-full border font-medium ${sm.bg}`}>
+                          {sm.icon}{sm.label}
                         </span>
                       </td>
                       <td>
@@ -466,7 +472,7 @@ export function PaymentTable() {
             </p>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
+                onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}
                 disabled={filters.page <= 1}
                 className="p-1.5 rounded-lg border border-white/[0.08] text-white/40
                            hover:border-[#6C63FF]/40 hover:text-white/70 transition-all
@@ -474,13 +480,12 @@ export function PaymentTable() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const p = Math.min(Math.max(1, filters.page - 2) + i, totalPages);
                 return (
                   <button
                     key={p}
-                    onClick={() => setFilters((f) => ({ ...f, page: p }))}
+                    onClick={() => setFilters(f => ({ ...f, page: p }))}
                     className={`w-8 h-8 rounded-lg text-xs font-medium transition-all
                       ${filters.page === p
                         ? 'bg-[#6C63FF] text-white'
@@ -491,9 +496,8 @@ export function PaymentTable() {
                   </button>
                 );
               })}
-
               <button
-                onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
+                onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
                 disabled={filters.page >= totalPages}
                 className="p-1.5 rounded-lg border border-white/[0.08] text-white/40
                            hover:border-[#6C63FF]/40 hover:text-white/70 transition-all
@@ -506,7 +510,6 @@ export function PaymentTable() {
         )}
       </div>
 
-      {/* Revoke credits modal */}
       {revokeTarget && (
         <RevokeModal
           payment={revokeTarget}
@@ -517,6 +520,8 @@ export function PaymentTable() {
     </div>
   );
 }
+
+// ── Simple debounce utility ───────────────────────────────────────────────────
 
 function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
   let timer: ReturnType<typeof setTimeout>;
