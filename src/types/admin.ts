@@ -1,5 +1,6 @@
 // Admin-Dashboard/src/types/admin.ts
 // Parts 31–32 — Complete TypeScript types for the admin dashboard
+// Part 37 — Added: SocialAnalytics, TopResearcher, FollowGrowthPoint
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,7 @@ export interface PaymentRow {
   amountInr: number;
   status: RazorpayOrderStatus;
   creditsToAdd: number;
-  isTest: boolean;       // Part 32: true for test-mode orders
+  isTest: boolean;
   createdAt: string;
   paidAt: string | null;
 }
@@ -193,7 +194,7 @@ export interface ResolveAbuseSignalPayload {
   userId: string;
   action: ReviewAction;
   note: string;
-  creditDeduction?: number;  // only used when action === 'warned'
+  creditDeduction?: number;
 }
 
 // ─── Part 32: Content View ────────────────────────────────────────────────────
@@ -204,15 +205,15 @@ export interface PlatformContentRow {
   id: string;
   contentType: PlatformContentType;
   title: string;
-  subtitle: string | null;    // query (report) | topic (podcast/debate) | running head (paper)
+  subtitle: string | null;
   userId: string;
   userEmail: string | null;
   userName: string | null;
   status: string;
-  depth?: string;             // reports: quick | deep | expert
-  durationSeconds?: number;   // podcasts
-  wordCount?: number;         // academic papers
-  sourcesCount?: number;      // reports
+  depth?: string;
+  durationSeconds?: number;
+  wordCount?: number;
+  sourcesCount?: number;
   createdAt: string;
 }
 
@@ -244,6 +245,48 @@ export interface WorkspaceOverviewFilters {
   search: string;
   page: number;
   pageSize: number;
+}
+
+// ─── Part 37: Social Analytics ────────────────────────────────────────────────
+
+/** Overall social health stats returned by get_social_analytics_admin() */
+export interface SocialAnalytics {
+  follows_today:      number;
+  follows_this_week:  number;
+  follows_all_time:   number;
+  public_profiles:    number;
+  public_reports:     number;
+  total_public_views: number;
+}
+
+/** A single researcher row from get_top_researchers_admin() */
+export interface TopResearcher {
+  id:                  string;
+  username:            string | null;
+  full_name:           string | null;
+  avatar_url:          string | null;
+  follower_count:      number;
+  following_count:     number;
+  report_count:        number;
+  public_report_count: number;
+  total_views:         number;
+}
+
+/** A single data point from get_follow_growth_7day() */
+export interface FollowGrowthPoint {
+  /** Short label e.g. "Mar 28" */
+  day:         string;
+  /** ISO date string e.g. "2026-03-28" */
+  date:        string;
+  new_follows: number;
+}
+
+/** Combined response shape from /api/admin/social */
+export interface SocialAnalyticsResponse {
+  analytics:      SocialAnalytics;
+  topResearchers: TopResearcher[];
+  followGrowth:   FollowGrowthPoint[];
+  error:          string | null;
 }
 
 // ─── API Response types ───────────────────────────────────────────────────────
@@ -309,5 +352,4 @@ export interface PaymentFilters {
   dateTo: string;
   page: number;
   pageSize: number;
-  // showTest removed — live orders only
 }
