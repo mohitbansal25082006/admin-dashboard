@@ -1,20 +1,7 @@
-'use client';
 // Admin-Dashboard/src/components/admin/ActivityChart.tsx
-// Part 31B — 7-day activity chart (new users + new reports).
-//
-// HYDRATION FIX: This component renders nothing on the server (returns a blank
-// placeholder) and only mounts on the client after the first paint.
-//
-// WHY: Browser extensions like Honey inject `bis_skin_checked="1"` into every
-// <div> on the client BEFORE React hydrates. Since the server HTML never has
-// these attributes, React sees a mismatch on every single div and logs the
-// hydration warning. suppressHydrationWarning only works on the element it is
-// placed on — not its children — so it cannot fix nested injection.
-//
-// The only reliable fix for extension-injected attributes across deeply nested
-// elements is to skip server rendering entirely for this component. The server
-// renders an empty same-height placeholder. The client renders the full chart
-// after mount. No HTML to mismatch = no warning.
+// Part 55.13 — Updated with theme-aware styling
+
+'use client';
 
 import { useState, useEffect } from 'react';
 import {
@@ -23,9 +10,10 @@ import {
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import type { DailyActivity } from '@/types/admin';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ActivityChartProps {
-  data:    DailyActivity[];
+  data: DailyActivity[];
   loading: boolean;
 }
 
@@ -33,17 +21,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="rounded-xl border border-white/[0.08] px-4 py-3 text-sm"
-      style={{ background: '#13131F' }}
+      className="rounded-xl border px-4 py-3 text-sm"
+      style={{
+        backgroundColor: 'var(--background-card)',
+        borderColor: 'var(--border)',
+      }}
     >
-      <p className="text-white/50 text-xs mb-2 font-medium">
+      <p className="text-xs mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>
         {label ? format(parseISO(label), 'EEEE, MMM d') : ''}
       </p>
       {payload.map((entry: any) => (
         <div key={entry.name} className="flex items-center gap-2 mb-1">
           <span className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
-          <span className="text-white/60 capitalize">{entry.name}:</span>
-          <span className="text-white font-semibold">{entry.value}</span>
+          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            {entry.name}:
+          </span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {entry.value}
+          </span>
         </div>
       ))}
     </div>
@@ -57,54 +52,65 @@ const SkeletonBar = ({ height, width }: { height: string; width: string }) => (
 );
 
 export function ActivityChart({ data, loading }: ActivityChartProps) {
-  // Client-only mount guard — prevents server rendering this component at all.
-  // This eliminates the entire category of "extension injects attributes into
-  // divs before React hydrates" hydration mismatches.
   const [mounted, setMounted] = useState(false);
+  const { isLight } = useTheme();
+
   useEffect(() => { setMounted(true); }, []);
 
-  // Server render: blank same-height placeholder so layout doesn't shift.
-  // The outer card renders on the server; only the chart content is deferred.
+  const bgGradient = isLight
+    ? 'linear-gradient(135deg, var(--background-elevated) 0%, var(--background) 100%)'
+    : 'linear-gradient(135deg, var(--background-card) 0%, var(--background) 100%)';
+
   if (!mounted) {
     return (
       <div
-        className="rounded-2xl border border-white/[0.07] p-6"
-        style={{ background: 'linear-gradient(135deg, #13131F 0%, #0F0F1C 100%)' }}
+        className="rounded-2xl border p-6"
+        style={{
+          background: bgGradient,
+          borderColor: 'var(--border)',
+        }}
       >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <div className="h-4 w-36 bg-white/[0.05] rounded animate-pulse" />
-            <div className="h-3 w-56 bg-white/[0.04] rounded animate-pulse mt-1.5" />
+            <div className="h-4 w-36 rounded animate-pulse" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }} />
+            <div className="h-3 w-56 rounded animate-pulse mt-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
           </div>
         </div>
-        <div className="h-[200px] bg-white/[0.02] rounded-xl animate-pulse" />
+        <div className="h-[200px] rounded-xl animate-pulse" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }} />
       </div>
     );
   }
+
   return (
     <div
-      className="rounded-2xl border border-white/[0.07] p-6"
-      style={{ background: 'linear-gradient(135deg, #13131F 0%, #0F0F1C 100%)' }}
+      className="rounded-2xl border p-6"
+      style={{
+        background: bgGradient,
+        borderColor: 'var(--border)',
+      }}
     >
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-base font-semibold text-white">Platform Activity</h3>
-          <p className="text-xs text-white/35 mt-0.5">New users & completed reports — last 7 days</p>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Platform Activity
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            New users & completed reports — last 7 days
+          </p>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 rounded-full bg-[#6C63FF] inline-block" />
-            <span className="text-white/40">Users</span>
+            <span className="w-3 h-1 rounded-full inline-block" style={{ backgroundColor: 'var(--primary)' }} />
+            <span style={{ color: 'var(--text-muted)' }}>Users</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 rounded-full bg-[#10B981] inline-block" />
-            <span className="text-white/40">Reports</span>
+            <span className="w-3 h-1 rounded-full inline-block" style={{ backgroundColor: 'var(--success)' }} />
+            <span style={{ color: 'var(--text-muted)' }}>Reports</span>
           </div>
         </div>
       </div>
 
       {loading ? (
-        // Fixed deterministic heights — no Math.random()
         <div className="h-[200px] flex items-end gap-3 px-2 pb-2">
           {SKELETON_HEIGHTS.map((h, i) => (
             <div key={i} className="flex-1 flex flex-col justify-end gap-1">
@@ -118,24 +124,24 @@ export function ActivityChart({ data, loading }: ActivityChartProps) {
           <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#6C63FF" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#6C63FF" stopOpacity={0}    />
+                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0}    />
+                <stop offset="5%" stopColor="var(--success)" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="var(--success)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
             <XAxis
               dataKey="day"
               tickFormatter={(v) => { try { return format(parseISO(v), 'MMM d'); } catch { return v; } }}
-              tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
@@ -145,21 +151,21 @@ export function ActivityChart({ data, loading }: ActivityChartProps) {
               type="monotone"
               dataKey="newUsers"
               name="users"
-              stroke="#6C63FF"
+              stroke="var(--primary)"
               strokeWidth={2}
               fill="url(#colorUsers)"
-              dot={{ fill: '#6C63FF', r: 3, strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: '#6C63FF' }}
+              dot={{ fill: 'var(--primary)', r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: 'var(--primary)' }}
             />
             <Area
               type="monotone"
               dataKey="newReports"
               name="reports"
-              stroke="#10B981"
+              stroke="var(--success)"
               strokeWidth={2}
               fill="url(#colorReports)"
-              dot={{ fill: '#10B981', r: 3, strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: '#10B981' }}
+              dot={{ fill: 'var(--success)', r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: 'var(--success)' }}
             />
           </AreaChart>
         </ResponsiveContainer>

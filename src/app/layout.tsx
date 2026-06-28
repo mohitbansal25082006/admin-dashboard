@@ -1,17 +1,20 @@
 // Admin-Dashboard/src/app/layout.tsx
-// Part 31 — Root layout for the admin dashboard.
+// Part 55.13 — Root layout with ThemeProvider
 
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from '../context/ThemeContext';
+import { ThemeToggle } from '../components/admin/ThemeToggle';
+import { Providers } from './providers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: 'DeepDive AI — Admin',
   description: 'DeepDive AI Admin Dashboard',
-  robots: 'noindex, nofollow', // Never index admin panel
+  robots: 'noindex, nofollow',
 };
 
 export default function RootLayout({
@@ -20,29 +23,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // suppressHydrationWarning on <html> and <body> prevents false hydration
-    // mismatch warnings caused by browser extensions (Grammarly, Honey, LastPass,
-    // etc.) that inject custom attributes like bis_register or __processed_*
-    // into the DOM before React hydrates. This is the official React/Next.js fix —
-    // it only suppresses warnings on these two root elements, not their children.
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} font-sans antialiased bg-[#080810] text-white`}
+        className={`${inter.variable} font-sans antialiased`}
+        style={{
+          backgroundColor: 'var(--background)',
+          color: 'var(--text-primary)',
+        }}
         suppressHydrationWarning
       >
-        {children}
-        <Toaster
-          position="top-right"
-          theme="dark"
-          richColors
-          toastOptions={{
-            style: {
-              background: '#13131F',
-              border: '1px solid rgba(108, 99, 255, 0.2)',
-              color: '#fff',
-            },
-          }}
-        />
+        <Providers>
+          <ThemeProvider>
+            {children}
+            <ThemeToggle />
+            <Toaster
+              position="top-right"
+              theme="dark"
+              richColors
+              toastOptions={{
+                style: {
+                  background: 'var(--background-card)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                },
+              }}
+            />
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

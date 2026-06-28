@@ -3,6 +3,14 @@
 //
 // GET  /api/admin/abuse  — Optionally run detection, then return signals
 // POST /api/admin/abuse  — Resolve a signal (clear / warn / suspend)
+//
+// FIX (showReviewed filter):
+//   The original RPC used p_is_reviewed BOOLEAN DEFAULT FALSE and relied on
+//   passing null to mean "show all". Supabase's JS client omits null-valued
+//   parameters, so Postgres always fell back to DEFAULT FALSE — making the
+//   "Show Reviewed" toggle silently do nothing.
+//   The RPC now exposes p_show_all BOOLEAN DEFAULT FALSE instead.
+//   This route passes p_show_all: showReviewed (true/false) directly — no nulls.
 
 import { NextRequest, NextResponse }               from 'next/server';
 import { verifyAdminSession, getAdminClient }       from '@/lib/supabase-admin';
@@ -26,6 +34,8 @@ export async function GET(request: NextRequest) {
   const runDetection = searchParams.get('runDetection') === 'true';
   const signalType   = searchParams.get('signalType')   ?? 'all';
   const severity     = searchParams.get('severity')     ?? 'all';
+  // showReviewed=true  → pass p_show_all=true  → RPC returns ALL signals
+  // showReviewed=false → pass p_show_all=false → RPC returns pending only
   const showReviewed = searchParams.get('showReviewed') === 'true';
   const page         = Math.max(1, parseInt(searchParams.get('page')     ?? '1',  10));
   const pageSize     = Math.min(50, parseInt(searchParams.get('pageSize') ?? '20', 10));
@@ -44,14 +54,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ── 2. Fetch signals via RPC (includes profile name + account_status) ────
+    // ── 2. Fetch signals via RPC ─────────────────────────────────────────────
+    // p_show_all=true  → skip is_reviewed filter → return all signals
+    // p_show_all=false → filter to is_reviewed=false → pending only
+    //
+    // NOTE: never pass null here — Supabase JS omits null params and Postgres
+    // falls back to the DEFAULT, which would break the showReviewed toggle.
     const { data: rows, error: fetchError } = await admin.rpc(
       'get_abuse_signals_with_users',
       {
-        p_is_reviewed: showReviewed ? null : false,   // null = both, false = pending only
+        p_show_all:    showReviewed,                              // bool, never null
         p_signal_type: signalType !== 'all' ? signalType : null,
-        p_severity:    severity    !== 'all' ? severity    : null,
-        p_limit:       500,   // fetch up to 500, paginate in JS
+        p_severity:    severity   !== 'all' ? severity   : null,
+        p_limit:       500,
       },
     );
 
@@ -147,10 +162,10 @@ export async function POST(request: NextRequest) {
 
   const { signalId, userId, action, note, creditDeduction } = body;
 
-  if (!signalId) return NextResponse.json({ error: 'signalId is required' }, { status: 400 });
-  if (!userId)   return NextResponse.json({ error: 'userId is required' },   { status: 400 });
-  if (!action)   return NextResponse.json({ error: 'action is required' },   { status: 400 });
-  if (!note?.trim()) return NextResponse.json({ error: 'note is required' }, { status: 400 });
+  if (!signalId)     return NextResponse.json({ error: 'signalId is required' }, { status: 400 });
+  if (!userId)       return NextResponse.json({ error: 'userId is required' },   { status: 400 });
+  if (!action)       return NextResponse.json({ error: 'action is required' },   { status: 400 });
+  if (!note?.trim()) return NextResponse.json({ error: 'note is required' },     { status: 400 });
 
   if (!['cleared', 'warned', 'suspended'].includes(action)) {
     return NextResponse.json({ error: 'Invalid action value' }, { status: 400 });

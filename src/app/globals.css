@@ -1,3 +1,6 @@
+/* Admin-Dashboard/src/app/globals.css */
+/* Part 55.13 — Updated with theme CSS variables */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -6,8 +9,8 @@
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -48,6 +51,63 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Theme CSS Variables ──────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand — will be overridden by theme engine */
+  --primary: #6C63FF;
+  --primary-light: #8B85FF;
+  --primary-dark: #4A42CC;
+  --secondary: #FF6584;
+  --accent: #43E97B;
+
+  /* Backgrounds */
+  --background: #0A0A1A;
+  --background-card: #12122A;
+  --background-elevated: #1A1A35;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0C0;
+  --text-muted: #5A5A7A;
+
+  /* Borders */
+  --border: #2A2A4A;
+  --border-focus: #6C63FF;
+
+  /* Status */
+  --success: #43E97B;
+  --error: #FF4757;
+  --warning: #FFA726;
+  --info: #29B6F6;
+
+  /* Extras */
+  --pro: #FFD700;
+  --enterprise: #E8D5FF;
+  --notification: #FF6B6B;
+
+  /* Gradients (comma-separated for CSS) */
+  --gradient-primary: #6C63FF, #8B5CF6;
+  --gradient-secondary: #FF6584, #FF8E53;
+  --gradient-dark: #0A0A1A, #12122A;
+  --gradient-card: #1A1A35, #12122A;
+  --gradient-success: #43E97B, #38F9D7;
+  --gradient-pro: #FFD700, #FF8C00;
+
+  /* Shadcn compatibility */
+  --color-primary: var(--primary);
+  --color-primary-foreground: #FFFFFF;
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--background-card);
+  --color-card-foreground: var(--text-primary);
+  --color-border: var(--border);
+  --color-muted: var(--background-elevated);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--text-primary);
+}
+
 /* ── Custom scrollbar ───────────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
@@ -68,86 +128,22 @@
   background: rgba(108, 99, 255, 0.5);
 }
 
-/* ── CSS Variables ──────────────────────────────────────────────────────────── */
-:root {
-  /* Brand */
-  --brand:         #6C63FF;
-  --brand-dark:    #5A52E0;
-  --brand-light:   rgba(108, 99, 255, 0.15);
-
-  /* Backgrounds */
-  --bg-base:       #080810;
-  --bg-surface:    #0D0D1A;
-  --bg-elevated:   #13131F;
-  --bg-card:       #16162A;
-
-  /* Borders */
-  --border: oklch(0.922 0 0);
-  --border-brand:  rgba(108, 99, 255, 0.25);
-
-  /* Text */
-  --text-primary:   #FFFFFF;
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-muted:     rgba(255, 255, 255, 0.35);
-
-  /* Status colors */
-  --green:   #10B981;
-  --red:     #EF4444;
-  --yellow:  #F59E0B;
-  --blue:    #3B82F6;
-  --purple:  #6C63FF;
-  --orange:  #F97316;
-
-  /* Chart colors */
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
 /* ── Base styles ────────────────────────────────────────────────────────────── */
 body {
-  background-color: var(--bg-base);
+  background-color: var(--background);
   color: var(--text-primary);
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
 }
 
 /* ── Glass card effect ──────────────────────────────────────────────────────── */
 .glass-card {
-  background: var(--bg-card);
+  background: var(--background-card);
   border: 1px solid var(--border);
   border-radius: 12px;
 }
 
 .glass-card-elevated {
-  background: var(--bg-elevated);
+  background: var(--background-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
@@ -165,19 +161,19 @@ body {
 /* ── Status badges ──────────────────────────────────────────────────────────── */
 .status-active {
   background: rgba(16, 185, 129, 0.15);
-  color: #10B981;
+  color: var(--success);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .status-suspended {
   background: rgba(239, 68, 68, 0.15);
-  color: #EF4444;
+  color: var(--error);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .status-flagged {
   background: rgba(245, 158, 11, 0.15);
-  color: #F59E0B;
+  color: var(--warning);
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
@@ -220,7 +216,7 @@ body {
 
 /* ── Gradient text ──────────────────────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #6C63FF, #A78BFA);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -243,53 +239,4 @@ body {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.25s ease-out;
-}
-
-/* ── shadcn overrides for dark theme ─────────────────────────────────────────── */
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: 0 0% 98%;
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --radius:       0.5rem;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
 }

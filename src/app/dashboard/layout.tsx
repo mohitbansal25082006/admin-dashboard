@@ -1,20 +1,16 @@
 // Admin-Dashboard/src/app/dashboard/layout.tsx
-// Part 31B — Dashboard layout.
-//
-// INFINITE REDIRECT LOOP FIX:
-// Reads the 'deepdive-admin-token' httpOnly cookie (set by /api/admin/set-session)
-// and validates it using the service role client. No @supabase/ssr dependency.
+// Part 55.13 — Dashboard layout with theme integration and mobile padding fix.
 
-import { redirect }      from 'next/navigation';
-import { cookies }       from 'next/headers';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getAdminClient } from '@/lib/supabase-admin';
-import { Sidebar }       from '@/components/admin/Sidebar';
+import { Sidebar } from '@/components/admin/Sidebar';
 
 const ADMIN_COOKIE = 'deepdive-admin-token';
 
 async function getAdminUser() {
   const cookieStore = await cookies();
-  const token       = cookieStore.get(ADMIN_COOKIE)?.value ?? null;
+  const token = cookieStore.get(ADMIN_COOKIE)?.value ?? null;
 
   if (!token) return null;
 
@@ -35,12 +31,12 @@ async function getAdminUser() {
       .eq('id', user.id)
       .single();
 
-    if (!profile?.is_admin)                     return null;
+    if (!profile?.is_admin) return null;
     if (profile.account_status === 'suspended') return null;
 
     return {
-      id:       user.id,
-      email:    user.email ?? '',
+      id: user.id,
+      email: user.email ?? '',
       fullName: profile.full_name ?? null,
     };
   } catch {
@@ -60,10 +56,18 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#080810]">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
       <Sidebar adminEmail={adminUser.email} />
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-[1400px] mx-auto px-6 py-6">
+      <main 
+        className="flex-1 overflow-y-auto"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-4 sm:pb-6 md:pt-6 md:pb-6">
+          {/* Add extra top padding on mobile to account for the hamburger menu */}
+          <div className="md:hidden h-14" /> {/* Spacer for mobile menu button */}
           {children}
         </div>
       </main>

@@ -1,6 +1,6 @@
 'use client';
 // Admin-Dashboard/src/app/dashboard/page.tsx
-// Part 31B — Overview dashboard: metrics grid + 7-day activity chart.
+// Part 55.13 — Updated with theme-aware styling and mobile-responsive cards.
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -9,63 +9,71 @@ import {
   TrendingUp, Zap, Database,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/auth';
-import { Header }      from '@/components/admin/Header';
-import { MetricCard }  from '@/components/admin/MetricCard';
+import { Header } from '@/components/admin/Header';
+import { MetricCard } from '@/components/admin/MetricCard';
 import { ActivityChart } from '@/components/admin/ActivityChart';
 import type { PlatformMetrics, DailyActivity } from '@/types/admin';
+import { useTheme } from '../../context/ThemeContext';
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
   return n.toLocaleString();
 }
 
 function fmtINR(n: number): string {
   if (n >= 100_000) return '₹' + (n / 100_000).toFixed(1) + 'L';
-  if (n >= 1_000)   return '₹' + (n / 1_000).toFixed(1)   + 'K';
+  if (n >= 1_000) return '₹' + (n / 1_000).toFixed(1) + 'K';
   return '₹' + n.toFixed(0);
 }
 
-// Credit economy health bar
 function CreditHealthBar({ issued, consumed }: { issued: number; consumed: number }) {
   const pct = issued > 0 ? Math.min(100, Math.round((consumed / issued) * 100)) : 0;
+  const { resolvedMode } = useTheme();
+  const isLight = resolvedMode === 'light';
+
   return (
     <div
-      className="rounded-2xl border border-white/[0.07] p-5 col-span-full"
-      style={{ background: 'linear-gradient(135deg, #13131F 0%, #0F0F1C 100%)' }}
+      className="rounded-2xl border p-4 sm:p-5 col-span-full"
+      style={{
+        backgroundColor: isLight ? 'var(--background-elevated)' : 'var(--background-card)',
+        borderColor: 'var(--border)',
+      }}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-white">Credit Economy Health</h3>
-          <p className="text-xs text-white/35 mt-0.5">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Credit Economy Health
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
             {fmt(consumed)} of {fmt(issued)} issued credits consumed ({pct}%)
           </p>
         </div>
-        <div className="flex items-center gap-4 text-xs">
-          <span className="flex items-center gap-1.5 text-white/40">
-            <span className="w-2 h-2 rounded-full bg-[#6C63FF]" />
+        <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs flex-wrap">
+          <span className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--primary)' }} />
             Consumed
           </span>
-          <span className="flex items-center gap-1.5 text-white/40">
-            <span className="w-2 h-2 rounded-full bg-white/15" />
+          <span className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--text-muted)' }} />
             In Circulation
           </span>
         </div>
       </div>
-      <div className="h-3 bg-white/[0.06] rounded-full overflow-hidden">
+      <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{
             width: `${pct}%`,
             background: pct > 80
-              ? 'linear-gradient(90deg, #EF4444, #F97316)'
+              ? `linear-gradient(90deg, var(--error), var(--warning))`
               : pct > 50
-              ? 'linear-gradient(90deg, #F59E0B, #6C63FF)'
-              : 'linear-gradient(90deg, #6C63FF, #10B981)',
+              ? `linear-gradient(90deg, var(--warning), var(--primary))`
+              : `linear-gradient(90deg, var(--primary), var(--success))`,
           }}
         />
       </div>
-      <div className="flex justify-between mt-2 text-[10px] text-white/25">
+      <div className="flex justify-between mt-2 text-[10px]" style={{ color: 'var(--text-muted)' }}>
         <span>0</span>
         <span>{fmt(issued)} total issued</span>
       </div>
@@ -74,21 +82,22 @@ function CreditHealthBar({ issued, consumed }: { issued: number; consumed: numbe
 }
 
 export default function OverviewPage() {
-  const [metrics,    setMetrics]    = useState<PlatformMetrics | null>(null);
-  const [activity,   setActivity]   = useState<DailyActivity[]>([]);
-  const [loading,    setLoading]    = useState(true);
+  const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
+  const [activity, setActivity] = useState<DailyActivity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { resolvedMode, isLight } = useTheme();
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    else           setLoading(true);
+    else setLoading(true);
 
     const [metricsRes, activityRes] = await Promise.all([
       adminFetch<PlatformMetrics>('/api/admin/metrics'),
       adminFetch<DailyActivity[]>('/api/admin/metrics/activity'),
     ]);
 
-    if (metricsRes.data)  setMetrics(metricsRes.data);
+    if (metricsRes.data) setMetrics(metricsRes.data);
     if (activityRes.data) setActivity(activityRes.data);
 
     setLoading(false);
@@ -108,8 +117,8 @@ export default function OverviewPage() {
         refreshing={refreshing}
       />
 
-      {/* Primary metrics grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      {/* Primary metrics grid - responsive with no truncation */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
         <MetricCard
           title="Total Users"
           value={m ? fmt(m.totalUsers) : '—'}
@@ -154,7 +163,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Secondary metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
         <MetricCard
           title="Credits Issued"
           value={m ? fmt(m.totalCreditsIssued) : '—'}
@@ -191,7 +200,7 @@ export default function OverviewPage() {
 
       {/* Credit economy health bar */}
       {m && (
-        <div className="grid grid-cols-1 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <CreditHealthBar issued={m.totalCreditsIssued} consumed={m.totalCreditsConsumed} />
         </div>
       )}
@@ -199,24 +208,31 @@ export default function OverviewPage() {
       {/* Activity chart */}
       <ActivityChart data={activity} loading={loading} />
 
-      {/* Today summary strip */}
+      {/* Today summary strip - responsive with no truncation */}
       {m && !loading && (
-        <div className="mt-4 grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           {[
-            { label: 'New Users Today',     value: m.newUsersToday,          color: '#6C63FF' },
-            { label: 'Reports Today',        value: m.reportsToday,           color: '#10B981' },
-            { label: 'Revenue Today',        value: fmtINR(m.revenueTodayInr), color: '#F59E0B' },
-            { label: 'Credits Consumed Today', value: fmt(m.creditsConsumedToday), color: '#3B82F6' },
-            { label: 'Credits Issued Total', value: fmt(m.totalCreditsIssued), color: '#8B5CF6' },
-            { label: 'Net Revenue Month',    value: fmtINR(m.revenueMonthInr), color: '#10B981' },
+            { label: 'New Users Today', value: m.newUsersToday, color: 'var(--primary)' },
+            { label: 'Reports Today', value: m.reportsToday, color: 'var(--success)' },
+            { label: 'Revenue Today', value: fmtINR(m.revenueTodayInr), color: 'var(--warning)' },
+            { label: 'Credits Consumed Today', value: fmt(m.creditsConsumedToday), color: 'var(--info)' },
+            { label: 'Credits Issued Total', value: fmt(m.totalCreditsIssued), color: 'var(--secondary)' },
+            { label: 'Net Revenue Month', value: fmtINR(m.revenueMonthInr), color: 'var(--success)' },
           ].map((s) => (
             <div
               key={s.label}
-              className="rounded-xl border border-white/[0.06] p-3 text-center"
-              style={{ background: '#0D0D1A' }}
+              className="rounded-xl border p-2 sm:p-3 text-center"
+              style={{
+                backgroundColor: isLight ? 'var(--background-elevated)' : 'var(--background-card)',
+                borderColor: 'var(--border)',
+              }}
             >
-              <p className="text-base font-bold" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[10px] text-white/30 mt-0.5 leading-tight">{s.label}</p>
+              <p className="text-sm sm:text-base font-bold truncate" style={{ color: s.color }}>
+                {s.value}
+              </p>
+              <p className="text-[8px] sm:text-[10px] mt-0.5 leading-tight truncate" style={{ color: 'var(--text-muted)' }}>
+                {s.label}
+              </p>
             </div>
           ))}
         </div>
